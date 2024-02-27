@@ -1,32 +1,38 @@
-import { Injectable } from '@nestjs/common';
-import axios from 'axios';
+import { Injectable, Logger } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { catchError, firstValueFrom } from 'rxjs';
+import { AxiosError } from 'axios';
+
+interface userData {
+  email: string;
+  username: string;
+  password: string;
+}
 
 @Injectable()
 export class LmsService {
-  async createLmsUser() {
-    const LmsApiUrl = 'https://maxbeauty.learnworlds.com/admin/api/users';
-    const accessToken = 'ywkODns3BvE3538WAmUEW5tH0lxeNIMN3H50sIQb';
-    const clientId = '65d8a994f99de245150c5623';
+  private readonly logger = new Logger(LmsService.name);
+  constructor(private readonly httpService: HttpService) {}
 
-    const data = [
-      'email:test2602_1@gmail.com',
-      'username:Test 2602',
-      'password:100500sad',
-      'is_admin: false',
-    ];
-
+  async createLmsUser(userData: userData): Promise<userData> {
     try {
-      const response = await axios.post(LmsApiUrl, data, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-          'lw-client': clientId,
-        },
-      });
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.LMS_ACCESS_TOKEN}`,
+        'lw-client': process.env.LMS_CLIENT_ID,
+      };
 
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to make POST request: ${error.message}`);
-    }
+      const { data } = await firstValueFrom(
+        this.httpService
+          .post<userData>(process.env.LMS_API_URL, userData, { headers })
+          .pipe(
+            catchError((error: AxiosError) => {
+              this.logger.error(error.response.data);
+              throw 'An error happened!';
+            }),
+          ),
+      );
+      return data;
+    } catch (error) {}
   }
 }

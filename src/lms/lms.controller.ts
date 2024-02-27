@@ -1,14 +1,20 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { LmsService } from './lms.service';
+
+interface createUserRequest {
+  email: string;
+  password: string;
+  username: string;
+}
 
 @Controller('lms')
 export class LmsController {
   constructor(private readonly lmsService: LmsService) {}
 
-  @Get()
-  async createUser() {
+  @Post()
+  async createUser(@Body() body: createUserRequest): Promise<any> {
     try {
-      const result = await this.lmsService.createLmsUser();
+      const result = await Promise.all([this.lmsService.createLmsUser(body)]);
       return { success: true, result };
     } catch (error) {
       return { success: false, error: error.message };
